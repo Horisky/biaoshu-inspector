@@ -71,23 +71,23 @@ _PASS2_USER = """从以下招标文件原文中，提取技术需求、商务需
 
 
 async def extract_tender(raw_text: str) -> dict:
-    """两轮抽取并归一化为审核引擎可消费的结构。"""
+    """两轮抽取并归一化为审核引擎可消费的结构。两轮互相独立，并发执行以缩短耗时。"""
+    import asyncio
     llm = get_llm_client()
     text_slice = raw_text[:16000]  # 关键信息通常在前半段
 
-    logger.info("招标文件抽取 · 第一轮（概况+资格+格式）...")
-    try:
-        pass1 = await llm.extract_json(_PASS1_SYSTEM, _PASS1_USER.format(text=text_slice))
-    except Exception as e:
-        logger.error(f"第一轮抽取失败: {e}")
-        pass1 = {}
+    async def _safe(system_prompt, user_prompt, label):
+        try:
+            return await llm.extract_json(system_prompt, user_prompt)
+        except Exception as e:
+            logger.error(f"{label}抽取失败: {e}")
+            return {}
 
-    logger.info("招标文件抽取 · 第二轮（技术+商务+评分）...")
-    try:
-        pass2 = await llm.extract_json(_PASS2_SYSTEM, _PASS2_USER.format(text=text_slice))
-    except Exception as e:
-        logger.error(f"第二轮抽取失败: {e}")
-        pass2 = {}
+    logger.info("招标文件抽取 · 两轮并发（概况+资格+格式 / 技术+商务+评分）...")
+    pass1, pass2 = await asyncio.gather(
+        _safe(_PASS1_SYSTEM, _PASS1_USER.format(text=text_slice), "第一轮"),
+        _safe(_PASS2_SYSTEM, _PASS2_USER.format(text=text_slice), "第二轮"),
+    )
 
     project_info = pass1.get("project_info") or {}
     format_req = pass1.get("format_requirements") or {}
