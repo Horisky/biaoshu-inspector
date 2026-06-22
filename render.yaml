@@ -1,0 +1,18 @@
+# Render Blueprint —— 在 Render 控制台 New + → Blueprint 选中本仓库即可按此创建服务
+services:
+  - type: web
+    name: biaoshu-inspector
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: DEEPSEEK_BASE_URL
+        sync: false      # 在 Render 后台填写
+      - key: DEEPSEEK_API_KEY
+        sync: false      # 在 Render 后台填写（密钥，勿入库）
+      - key: DEEPSEEK_MODEL
+        sync: false      # 在 Render 后台填写
+      - key: MAX_UPLOAD_MB
+        value: "30"

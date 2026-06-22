@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>标书规范性检测 · AI 合规审核</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<style>
+  [x-cloak]{display:none!important}
+  body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;-webkit-font-smoothing:antialiased}
+  ::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:9999px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .spin{animation:spin .8s linear infinite}
+  @keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.3}}
+  .pulse-dot{animation:pulse-dot 1.2s ease-in-out infinite}
+</style>
+</head>
+<body class="bg-[#F4F7FC] text-[#1D2129]" x-data="inspector()" x-cloak>
+
+<!-- ── Header ─────────────────────────────────────────── -->
+<header class="bg-white border-b border-[#E8ECF0] sticky top-0 z-30">
+  <div class="max-w-[1200px] mx-auto px-6 h-[60px] flex items-center gap-3">
+    <div class="w-9 h-9 bg-[#1677FF] rounded-xl flex items-center justify-center shadow-md shadow-blue-200">
+      <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+    </div>
+    <div class="flex-1">
+      <h1 class="text-[16px] font-bold leading-tight">标书规范性检测</h1>
+      <p class="text-[11px] text-[#86909C] leading-tight">AI 合规审核 · 八大维度 · 废标风险预警</p>
+    </div>
+    <button x-show="view==='report'" @click="reset()"
+            class="px-4 py-2 text-[13px] text-[#1677FF] border border-[#1677FF]/30 rounded-lg hover:bg-[#EBF4FF] transition-colors">
+      ↻ 重新检测
+    </button>
+  </div>
+</header>
+
+<main class="max-w-[1200px] mx-auto px-6 py-8">
+
+  <!-- ── 错误提示 ───────────────────────────────────── -->
+  <div x-show="error" x-transition class="mb-5 flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+    <svg class="w-5 h-5 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5.07 19h13.86a2 2 0 001.71-3l-6.93-12a2 2 0 00-3.42 0L3.34 16a2 2 0 001.73 3z"/>
+    </svg>
+    <div class="flex-1 text-[13px] text-red-700" x-text="error"></div>
+    <button @click="error=''" class="text-red-400 hover:text-red-600">✕</button>
+  </div>
+
+  <!-- ════════════ 上传界面 ════════════ -->
+  <section x-show="view==='upload'" x-transition>
+    <div class="text-center mb-8">
+      <h2 class="text-[24px] font-bold mb-2">上传招标与投标文件，开始合规检测</h2>
+      <p class="text-[14px] text-[#86909C]">系统将逐条比对招标要求，输出否决项与扣分项，预警废标风险</p>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-5 mb-6">
+      <!-- 招标文件 -->
+      <template x-for="slot in [{key:'tender',label:'招标文件',hint:'用于提取评分标准与资格/技术要求',color:'#1677FF'},{key:'bid',label:'投标文件',hint:'被检测的对象，将逐章对照审核',color:'#722ED1'}]" :key="slot.key">
+        <label class="block cursor-pointer"
+               @dragover.prevent="dragOver=slot.key" @dragleave.prevent="dragOver=''"
+               @drop.prevent="onDrop($event, slot.key)">
+          <div class="bg-white rounded-2xl border-2 border-dashed transition-all p-7 h-[200px] flex flex-col items-center justify-center text-center"
+               :class="dragOver===slot.key ? 'border-[#1677FF] bg-[#EBF4FF]' : (files[slot.key] ? 'border-[#00B42A]/50 bg-[#F0FAF2]' : 'border-[#D9DEE7] hover:border-[#1677FF]/50')">
+            <template x-if="!files[slot.key]">
+              <div>
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3" :style="`background:${slot.color}1A`">
+                  <svg class="w-6 h-6" :style="`color:${slot.color}`" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.9A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/>
+                  </svg>
+                </div>
+                <p class="text-[15px] font-semibold mb-1" x-text="slot.label"></p>
+                <p class="text-[12px] text-[#86909C] mb-1">点击或拖拽上传 · PDF / Word</p>
+                <p class="text-[11px] text-[#C9CDD4]" x-text="slot.hint"></p>
+              </div>
+            </template>
+            <template x-if="files[slot.key]">
+              <div class="w-full">
+                <div class="w-12 h-12 rounded-xl bg-[#00B42A]/10 flex items-center justify-center mx-auto mb-3">
+                  <svg class="w-6 h-6 text-[#00B42A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                </div>
+                <p class="text-[13px] font-medium truncate px-4" x-text="files[slot.key].name"></p>
+                <p class="text-[11px] text-[#86909C] mt-1" x-text="(files[slot.key].size/1024/1024).toFixed(2)+' MB · 点击重新选择'"></p>
+              </div>
+            </template>
+          </div>
+          <input type="file" class="hidden" accept=".pdf,.docx,.doc" @change="onPick($event, slot.key)">
+        </label>
+      </template>
+    </div>
+
+    <div class="text-center">
+      <button @click="submit()" :disabled="!files.tender || !files.bid"
+              class="px-10 py-3 rounded-xl text-[15px] font-semibold text-white transition-all shadow-lg shadow-blue-200"
+              :class="(files.tender && files.bid) ? 'bg-[#1677FF] hover:bg-[#0F67E8]' : 'bg-[#C9CDD4] cursor-not-allowed shadow-none'">
+        开始检测
+      </button>
+      <p class="text-[12px] text-[#86909C] mt-3">检测约需 30~90 秒，取决于文件长度</p>
+    </div>
+
+    <!-- 维度说明 -->
+    <div class="mt-10 bg-white rounded-2xl border border-[#E8ECF0] p-6">
+      <p class="text-[13px] font-semibold mb-4">检测涵盖八大维度</p>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <template x-for="d in dimensions" :key="d.key">
+          <div class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-[#F7F8FA]">
+            <span class="w-7 h-7 rounded-lg flex items-center justify-center text-[12px]" :style="`background:${d.c}1A;color:${d.c}`" x-text="d.n"></span>
+            <span class="text-[13px] font-medium" x-text="d.key"></span>
+          </div>
+        </template>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════ 检测中 ════════════ -->
+  <section x-show="view==='loading'" x-transition class="py-16">
+    <div class="max-w-[420px] mx-auto text-center">
+      <div class="w-16 h-16 mx-auto mb-6">
+        <svg class="w-16 h-16 text-[#1677FF] spin" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/>
+          <path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.37 0 0 5.37 0 12h4z"/>
+        </svg>
+      </div>
+      <h2 class="text-[18px] font-bold mb-1">正在检测中…</h2>
+      <p class="text-[13px] text-[#86909C] mb-8">请勿关闭页面，AI 正在逐条比对招标要求</p>
+      <div class="space-y-3 text-left">
+        <template x-for="(s,i) in steps" :key="i">
+          <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-[#E8ECF0]">
+            <span class="w-6 h-6 rounded-full flex items-center justify-center shrink-0"
+                  :class="loadingStep>i ? 'bg-[#00B42A] text-white' : (loadingStep===i ? 'bg-[#1677FF] text-white pulse-dot' : 'bg-[#F2F3F5] text-[#C9CDD4]')">
+              <template x-if="loadingStep>i"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></template>
+              <template x-if="loadingStep<=i"><span class="text-[11px]" x-text="i+1"></span></template>
+            </span>
+            <span class="text-[14px]" :class="loadingStep>=i ? 'text-[#1D2129] font-medium' : 'text-[#C9CDD4]'" x-text="s"></span>
+          </div>
+        </template>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════ 检测报告 ════════════ -->
+  <section x-show="view==='report'" x-transition x-cloak>
+    <template x-if="report">
+    <div>
+      <!-- 工具栏 -->
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-[18px] font-bold">检测报告</h2>
+        <div class="flex gap-2">
+          <button @click="exportReport('docx')" :disabled="exporting"
+                  class="flex items-center gap-1.5 px-4 py-2 text-[13px] rounded-lg border transition-colors disabled:opacity-50"
+                  :class="exporting==='docx' ? 'bg-[#EBF4FF] border-[#1677FF] text-[#1677FF]' : 'bg-white border-[#E8ECF0] text-[#4E5969] hover:border-[#1677FF]/40 hover:text-[#1677FF]'">
+            <svg class="w-4 h-4" :class="exporting==='docx' && 'spin'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+            </svg>
+            <span x-text="exporting==='docx' ? '生成中…' : '导出 Word'"></span>
+          </button>
+          <button @click="exportReport('pdf')" :disabled="exporting"
+                  class="flex items-center gap-1.5 px-4 py-2 text-[13px] rounded-lg border transition-colors disabled:opacity-50"
+                  :class="exporting==='pdf' ? 'bg-[#FFF1F0] border-[#F53F3F] text-[#F53F3F]' : 'bg-white border-[#E8ECF0] text-[#4E5969] hover:border-[#F53F3F]/40 hover:text-[#F53F3F]'">
+            <svg class="w-4 h-4" :class="exporting==='pdf' && 'spin'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+            </svg>
+            <span x-text="exporting==='pdf' ? '生成中…' : '导出 PDF'"></span>
+          </button>
+        </div>
+      </div>
+      <!-- 总览卡 -->
+      <div class="bg-white rounded-2xl border border-[#E8ECF0] p-6 mb-5">
+        <div class="flex flex-col md:flex-row gap-6 items-center">
+          <!-- 得分 -->
+          <div class="text-center shrink-0 px-4">
+            <div class="text-[52px] font-black leading-none" :class="scoreColor(report.overall_score)" x-text="report.overall_score ?? '—'"></div>
+            <p class="text-[12px] text-[#86909C] mt-1">预估得分</p>
+          </div>
+          <div class="hidden md:block w-px h-16 bg-[#E8ECF0]"></div>
+          <!-- 结论 -->
+          <div class="flex-1 min-w-0">
+            <p class="text-[16px] font-semibold mb-1.5" x-text="report.overall_verdict || '检测完成'"></p>
+            <p class="text-[13px] text-[#86909C]" x-show="report.score_note" x-text="report.score_note"></p>
+            <p class="text-[12px] text-[#C9CDD4] mt-2" x-text="`招标需求 ${meta.requirement_count} 条 · 投标分 ${meta.section_count} 章 · 用时 ${meta.elapsed_seconds}s`"></p>
+          </div>
+          <!-- 三色计数 -->
+          <div class="flex gap-2 shrink-0">
+            <div class="text-center px-4 py-2 rounded-xl bg-red-50">
+              <div class="text-[24px] font-bold text-red-600" x-text="counts.red"></div>
+              <div class="text-[11px] text-red-500">否决项</div>
+            </div>
+            <div class="text-center px-4 py-2 rounded-xl bg-amber-50">
+              <div class="text-[24px] font-bold text-amber-600" x-text="counts.yellow"></div>
+              <div class="text-[11px] text-amber-500">扣分项</div>
+            </div>
+            <div class="text-center px-4 py-2 rounded-xl bg-green-50">
+              <div class="text-[24px] font-bold text-green-600" x-text="counts.green"></div>
+              <div class="text-[11px] text-green-500">合规</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid lg:grid-cols-[1fr_300px] gap-5">
+        <!-- 问题清单 -->
+        <div>
+          <!-- 筛选 -->
+          <div class="flex items-center gap-2 mb-4 flex-wrap">
+            <span class="text-[13px] text-[#86909C]">严重程度</span>
+            <template x-for="f in severityFilters" :key="f.v">
+              <button @click="sevFilter=f.v"
+                      class="px-3 py-1.5 text-[13px] rounded-lg transition-colors border"
+                      :class="sevFilter===f.v ? 'bg-[#1677FF] text-white border-[#1677FF]' : 'bg-white text-[#4E5969] border-[#E8ECF0] hover:border-[#1677FF]/40'">
+                <span x-text="f.l"></span>
+              </button>
+            </template>
+          </div>
+
+          <div class="space-y-3">
+            <template x-for="f in filteredFindings" :key="f.id">
+              <div class="bg-white rounded-xl border border-[#E8ECF0] overflow-hidden">
+                <div class="h-1" :style="`background:${sevColor(f.severity)}`"></div>
+                <div class="p-4">
+                  <div class="flex items-start gap-2 mb-2">
+                    <span class="px-2 py-0.5 rounded text-[11px] font-medium shrink-0 mt-0.5"
+                          :style="`background:${sevColor(f.severity)}1A;color:${sevColor(f.severity)}`"
+                          x-text="sevLabel(f.severity)"></span>
+                    <span x-show="f.is_knockout" class="px-2 py-0.5 rounded text-[11px] font-bold bg-red-600 text-white shrink-0 mt-0.5">废标风险</span>
+                    <span class="px-2 py-0.5 rounded text-[11px] bg-[#F2F3F5] text-[#86909C] shrink-0 mt-0.5" x-text="f.dimension"></span>
+                    <h3 class="text-[14px] font-semibold flex-1" x-text="f.title"></h3>
+                  </div>
+                  <p class="text-[12px] text-[#C9CDD4] mb-2" x-show="f.location" x-text="'📍 '+f.location"></p>
+                  <p class="text-[13px] text-[#4E5969] leading-6 mb-3" x-text="f.description"></p>
+
+                  <div class="space-y-1.5 mb-3">
+                    <template x-if="f.rule_reference">
+                      <div class="text-[12px] text-[#4E5969] bg-[#F7F8FA] rounded-lg px-3 py-2">
+                        <span class="text-[#86909C]">招标条款：</span><span x-text="f.rule_reference"></span>
+                      </div>
+                    </template>
+                    <template x-if="f.law_reference">
+                      <div class="text-[12px] text-[#4E5969] bg-[#F7F8FA] rounded-lg px-3 py-2">
+                        <span class="text-[#86909C]">法律依据：</span><span x-text="f.law_reference"></span>
+                      </div>
+                    </template>
+                  </div>
+
+                  <div class="bg-[#EBF4FF] rounded-lg px-3 py-2.5">
+                    <p class="text-[12px] font-medium text-[#1677FF] mb-1">✏ 修改建议</p>
+                    <p class="text-[13px] text-[#1D2129] leading-6" x-text="f.suggestion"></p>
+                    <ul class="mt-1.5 space-y-0.5" x-show="f.actions && f.actions.length">
+                      <template x-for="(a,ai) in (f.actions||[])" :key="ai">
+                        <li class="text-[12px] text-[#4E5969] flex gap-1.5"><span class="text-[#1677FF]">·</span><span x-text="a"></span></li>
+                      </template>
+                    </ul>
+                  </div>
+                  <p class="text-[12px] text-[#86909C] mt-2" x-show="f.score_impact" x-text="'评分影响：'+f.score_impact"></p>
+                </div>
+              </div>
+            </template>
+            <div x-show="filteredFindings.length===0" class="text-center py-12 text-[#C9CDD4] text-[14px]">
+              该筛选条件下没有问题项 🎉
+            </div>
+          </div>
+        </div>
+
+        <!-- 右栏：分布 + 优先级 -->
+        <div class="space-y-4">
+          <div class="bg-white rounded-xl border border-[#E8ECF0] p-4" x-show="catDist.length">
+            <p class="text-[13px] font-semibold mb-3">问题分类分布</p>
+            <div class="space-y-2.5">
+              <template x-for="c in catDist" :key="c.name">
+                <div>
+                  <div class="flex justify-between text-[12px] mb-1">
+                    <span class="text-[#4E5969]" x-text="c.name"></span>
+                    <span class="text-[#86909C]" x-text="c.value"></span>
+                  </div>
+                  <div class="h-1.5 bg-[#F2F3F5] rounded-full overflow-hidden">
+                    <div class="h-full bg-[#1677FF] rounded-full" :style="`width:${c.pct}%`"></div>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-xl border border-[#E8ECF0] p-4" x-show="report.fix_priority && report.fix_priority.length">
+            <p class="text-[13px] font-semibold mb-3">优先修改顺序</p>
+            <div class="space-y-2.5">
+              <template x-for="p in report.fix_priority" :key="p.id">
+                <div class="flex gap-2.5">
+                  <span class="w-5 h-5 rounded-full bg-[#1677FF] text-white text-[11px] flex items-center justify-center shrink-0" x-text="p.rank"></span>
+                  <div class="min-w-0">
+                    <p class="text-[12px] font-medium" x-text="p.id"></p>
+                    <p class="text-[12px] text-[#86909C] leading-5" x-text="p.reason"></p>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-xl border border-[#E8ECF0] p-4 text-[12px] text-[#86909C] space-y-1">
+            <p>招标文件：<span class="text-[#4E5969]" x-text="meta.tender_file"></span></p>
+            <p>投标文件：<span class="text-[#4E5969]" x-text="meta.bid_file"></span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+    </template>
+  </section>
+
+</main>
+
+<footer class="text-center text-[12px] text-[#C9CDD4] py-6">
+  标书规范性检测 · 检测结果由 AI 生成，仅供参考，最终以人工复核为准
+</footer>
+
+<script>
+function inspector(){
+  return {
+    view:'upload', error:'', dragOver:'', exporting:'',
+    files:{tender:null, bid:null},
+    report:null, meta:{}, projectInfo:{},
+    loadingStep:0, _timer:null,
+    steps:['解析招标 / 投标文件','抽取招标需求与评分标准','八大维度合规审核'],
+    sevFilter:'all',
+    severityFilters:[{v:'all',l:'全部'},{v:'red',l:'否决项'},{v:'yellow',l:'扣分项'},{v:'green',l:'合规'}],
+    dimensions:[
+      {key:'评标办法',n:'评',c:'#1677FF'},{key:'资格',n:'资',c:'#722ED1'},
+      {key:'技术规范',n:'技',c:'#00B42A'},{key:'合同条款',n:'合',c:'#FF7D00'},
+      {key:'规范性',n:'范',c:'#EB2F96'},{key:'法律法规',n:'法',c:'#13C2C2'},
+      {key:'一致性',n:'一',c:'#2F54EB'},{key:'有效性',n:'效',c:'#FA8C16'},
+    ],
+
+    onPick(e,key){ const f=e.target.files[0]; if(f){ this.files[key]=f; this.error=''; } },
+    onDrop(e,key){ this.dragOver=''; const f=e.dataTransfer.files[0];
+      if(f){ const ok=/\.(pdf|docx|doc)$/i.test(f.name); if(!ok){this.error='只支持 PDF / Word 文件';return;} this.files[key]=f; this.error=''; } },
+
+    reset(){ this.view='upload'; this.report=null; this.files={tender:null,bid:null}; this.error=''; this.sevFilter='all'; },
+
+    async exportReport(fmt){
+      if(this.exporting) return;
+      this.exporting=fmt; this.error='';
+      try{
+        const r=await fetch('/api/export/'+fmt,{
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({project_info:this.projectInfo, report:this.report, meta:this.meta}),
+        });
+        if(!r.ok){ const d=await r.json().catch(()=>({})); this.error=(d&&d.detail)||('导出失败 ('+r.status+')'); return; }
+        const blob=await r.blob();
+        const cd=r.headers.get('Content-Disposition')||'';
+        let name=(this.projectInfo.project_name||'标书规范性检测报告')+'_检测报告.'+fmt;
+        const m=cd.match(/filename\*=UTF-8''([^;]+)/i); if(m){ try{ name=decodeURIComponent(m[1]); }catch(e){} }
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click();
+        a.remove(); URL.revokeObjectURL(url);
+      }catch(err){ this.error='导出失败：'+err.message; }
+      finally{ this.exporting=''; }
+    },
+
+    async submit(){
+      if(!this.files.tender || !this.files.bid) return;
+      this.error=''; this.view='loading'; this.loadingStep=0;
+      // 进度动画（前两步用时间推进，第三步停在审核）
+      this._timer=setInterval(()=>{ if(this.loadingStep<2) this.loadingStep++; },8000);
+
+      const fd=new FormData();
+      fd.append('tender_file', this.files.tender);
+      fd.append('bid_file', this.files.bid);
+      try{
+        const r=await fetch('/api/inspect',{method:'POST',body:fd});
+        const data=await r.json().catch(()=>({}));
+        clearInterval(this._timer);
+        if(!r.ok){ this.error=(data && data.detail) ? data.detail : ('检测失败 ('+r.status+')'); this.view='upload'; return; }
+        this.report=data.report||{}; this.meta=data.meta||{}; this.projectInfo=data.project_info||{};
+        this.loadingStep=3; this.view='report'; window.scrollTo(0,0);
+      }catch(err){
+        clearInterval(this._timer);
+        this.error='请求失败：'+err.message; this.view='upload';
+      }
+    },
+
+    get counts(){ const c=(this.report&&this.report.counts)||{}; const f=(this.report&&this.report.findings)||[];
+      return { red: c.red ?? f.filter(x=>x.severity==='red').length,
+               yellow: c.yellow ?? f.filter(x=>x.severity==='yellow').length,
+               green: c.green ?? f.filter(x=>x.severity==='green').length }; },
+    get filteredFindings(){ const f=(this.report&&this.report.findings)||[];
+      return this.sevFilter==='all' ? f : f.filter(x=>x.severity===this.sevFilter); },
+    get catDist(){ const d=(this.report&&this.report.category_distribution)||{};
+      const items=Object.entries(d).map(([name,value])=>({name,value:+value||0})).filter(x=>x.value>0);
+      const max=Math.max(1,...items.map(x=>x.value));
+      return items.map(x=>({...x,pct:Math.round(x.value/max*100)})); },
+
+    sevColor(s){ return s==='red'?'#F53F3F':s==='yellow'?'#FF7D00':'#00B42A'; },
+    sevLabel(s){ return s==='red'?'否决项·必改':s==='yellow'?'扣分项·建议改':'合规'; },
+    scoreColor(s){ return s>=85?'text-[#00B42A]':s>=70?'text-[#FF7D00]':'text-[#F53F3F]'; },
+  }
+}
+</script>
+</body>
+</html>
