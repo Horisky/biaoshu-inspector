@@ -356,24 +356,35 @@ function inspector(){
       finally{ this.exporting=''; }
     },
 
+    stepIndex(step){ return {queued:0, parsing:0, extracting:1, reviewing:2}[step] ?? 0; },
+
     async submit(){
       if(!this.files.tender || !this.files.bid) return;
       this.error=''; this.view='loading'; this.loadingStep=0;
-      // 进度动画（前两步用时间推进，第三步停在审核）
-      this._timer=setInterval(()=>{ if(this.loadingStep<2) this.loadingStep++; },8000);
 
       const fd=new FormData();
       fd.append('tender_file', this.files.tender);
       fd.append('bid_file', this.files.bid);
       try{
+        // 1) 提交任务，秒回 job_id（不再受 100 秒超时限制）
         const r=await fetch('/api/inspect',{method:'POST',body:fd});
         const data=await r.json().catch(()=>({}));
-        clearInterval(this._timer);
-        if(!r.ok){ this.error=(data && data.detail) ? data.detail : ('检测失败 ('+r.status+')'); this.view='upload'; return; }
-        this.report=data.report||{}; this.meta=data.meta||{}; this.projectInfo=data.project_info||{};
-        this.loadingStep=3; this.view='report'; window.scrollTo(0,0);
+        if(!r.ok){ this.error=(data && data.detail) ? data.detail : ('提交失败 ('+r.status+')'); this.view='upload'; return; }
+        const jobId=data.job_id;
+        // 2) 轮询进度，直到 done / error
+        for(;;){
+          await new Promise(res=>setTimeout(res,3000));
+          let s;
+          try{ s=await (await fetch('/api/inspect/status/'+jobId)).json(); }
+          catch(e){ continue; }  // 网络抖动，继续轮询
+          if(s.step) this.loadingStep=this.stepIndex(s.step);
+          if(s.status==='done'){
+            this.report=s.report||{}; this.meta=s.meta||{}; this.projectInfo=s.project_info||{};
+            this.loadingStep=3; this.view='report'; window.scrollTo(0,0); return;
+          }
+          if(s.status==='error'){ this.error=s.error||'检测失败'; this.view='upload'; return; }
+        }
       }catch(err){
-        clearInterval(this._timer);
         this.error='请求失败：'+err.message; this.view='upload';
       }
     },

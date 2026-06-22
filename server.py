@@ -9,7 +9,9 @@
   python server.py
   浏览器打开 http://localhost:8100
 """
+import asyncio
 import time
+import uuid
 from pathlib import Path
 
 from urllib.parse import quote
@@ -65,78 +67,103 @@ async def _read_upload(f: UploadFile, label: str) -> bytes:
     return data
 
 
+# ── 异步任务存储（单进程内存；单 worker 部署适用）──────────────
+JOBS: dict[str, dict] = {}
+JOB_TTL = 3600  # 任务结果保留 1 小时
+
+
+def _prune_jobs():
+    now = time.time()
+    for k in [k for k, v in JOBS.items() if now - v.get("created", now) > JOB_TTL]:
+        JOBS.pop(k, None)
+
+
+async def _run_inspect_job(job_id: str, tender_bytes: bytes, tender_name: str,
+                           bid_bytes: bytes, bid_name: str):
+    """后台执行：解析 → 抽取 → 八维审核，把进度/结果写入 JOBS。"""
+    job = JOBS[job_id]
+    t0 = job["created"]
+    try:
+        job["step"] = "parsing"
+        try:
+            tender_text = parse_document(tender_bytes, tender_name)
+            bid_text = parse_document(bid_bytes, bid_name)
+        except Exception as e:
+            raise ValueError(f"文档解析失败：{e}")
+        if len(tender_text.strip()) < 50:
+            raise ValueError("招标文件解析后内容过少，可能是扫描件或加密文件，请换用可复制文本的版本")
+        if len(bid_text.strip()) < 50:
+            raise ValueError("投标文件解析后内容过少，可能是扫描件或加密文件，请换用可复制文本的版本")
+
+        job["step"] = "extracting"
+        extraction = await extract_tender(tender_text)
+        project_info = extraction.get("project_info", {}) or {}
+        requirements = extraction.get("requirements", []) or []
+        sections = split_into_sections(bid_text)
+
+        job["step"] = "reviewing"
+        report = await run_review(
+            project_name=project_info.get("project_name") or (bid_name or "投标文件"),
+            purchaser=project_info.get("purchaser") or "",
+            budget=str(project_info.get("budget_amount") or ""),
+            deadline=str(project_info.get("submission_deadline") or ""),
+            global_terms={"项目名称": project_info.get("project_name") or "本项目",
+                          "采购人": project_info.get("purchaser") or "采购人"},
+            requirements=requirements,
+            sections=sections,
+        )
+
+        elapsed = round(time.time() - t0, 1)
+        job["result"] = {
+            "project_info": project_info,
+            "report": report,
+            "meta": {
+                "tender_file": tender_name,
+                "bid_file": bid_name,
+                "tender_chars": len(tender_text),
+                "bid_chars": len(bid_text),
+                "requirement_count": len(requirements),
+                "section_count": len(sections),
+                "elapsed_seconds": elapsed,
+            },
+        }
+        job["status"] = "done"
+        logger.info(f"检测完成 job={job_id}，用时 {elapsed}s")
+    except Exception as e:
+        logger.exception(f"检测失败 job={job_id}")
+        job["status"] = "error"
+        job["error"] = str(e)
+
+
 @app.post("/api/inspect")
 async def inspect(
     tender_file: UploadFile = File(..., description="招标文件"),
     bid_file: UploadFile = File(..., description="投标文件"),
 ):
-    """招标 + 投标 → 八维度规范性检测报告。"""
-    t0 = time.time()
-
+    """提交检测任务，立即返回 job_id；前端轮询 /api/inspect/status/{job_id}。"""
     tender_bytes = await _read_upload(tender_file, "招标文件")
     bid_bytes = await _read_upload(bid_file, "投标文件")
+    _prune_jobs()
+    job_id = uuid.uuid4().hex[:12]
+    JOBS[job_id] = {"status": "running", "step": "queued", "created": time.time()}
+    asyncio.create_task(
+        _run_inspect_job(job_id, tender_bytes, tender_file.filename, bid_bytes, bid_file.filename)
+    )
+    return JSONResponse({"job_id": job_id}, status_code=202)
 
-    # 1) 解析
-    try:
-        tender_text = parse_document(tender_bytes, tender_file.filename)
-        bid_text = parse_document(bid_bytes, bid_file.filename)
-    except Exception as e:
-        logger.exception("文档解析失败")
-        raise HTTPException(400, f"文档解析失败：{e}")
 
-    if len(tender_text.strip()) < 50:
-        raise HTTPException(400, "招标文件解析后内容过少，可能是扫描件或加密文件，请换用可复制文本的版本")
-    if len(bid_text.strip()) < 50:
-        raise HTTPException(400, "投标文件解析后内容过少，可能是扫描件或加密文件，请换用可复制文本的版本")
-
-    # 2) 抽取招标需求
-    try:
-        extraction = await extract_tender(tender_text)
-    except Exception as e:
-        logger.exception("招标需求抽取失败")
-        raise HTTPException(502, f"招标需求抽取失败（请检查 LLM 配置）：{e}")
-
-    project_info = extraction.get("project_info", {}) or {}
-    requirements = extraction.get("requirements", []) or []
-
-    # 3) 切分投标文件为章节
-    sections = split_into_sections(bid_text)
-
-    # 4) 八维审核
-    global_terms = {
-        "项目名称": project_info.get("project_name") or "本项目",
-        "采购人": project_info.get("purchaser") or "采购人",
-    }
-    try:
-        report = await run_review(
-            project_name=project_info.get("project_name") or (bid_file.filename or "投标文件"),
-            purchaser=project_info.get("purchaser") or "",
-            budget=str(project_info.get("budget_amount") or ""),
-            deadline=str(project_info.get("submission_deadline") or ""),
-            global_terms=global_terms,
-            requirements=requirements,
-            sections=sections,
-        )
-    except Exception as e:
-        logger.exception("AI 审核失败")
-        raise HTTPException(502, f"AI 审核失败（请检查 LLM 配置）：{e}")
-
-    elapsed = round(time.time() - t0, 1)
-    logger.info(f"检测完成，用时 {elapsed}s")
-
-    return JSONResponse({
-        "project_info": project_info,
-        "report": report,
-        "meta": {
-            "tender_file": tender_file.filename,
-            "bid_file": bid_file.filename,
-            "tender_chars": len(tender_text),
-            "bid_chars": len(bid_text),
-            "requirement_count": len(requirements),
-            "section_count": len(sections),
-            "elapsed_seconds": elapsed,
-        },
-    })
+@app.get("/api/inspect/status/{job_id}")
+async def inspect_status(job_id: str):
+    """查询检测任务进度/结果。"""
+    job = JOBS.get(job_id)
+    if not job:
+        raise HTTPException(404, "任务不存在或已过期")
+    resp = {"status": job["status"], "step": job.get("step")}
+    if job["status"] == "done":
+        resp.update(job["result"])
+    elif job["status"] == "error":
+        resp["error"] = job.get("error")
+    return resp
 
 
 def _download_name(payload: dict, ext: str) -> str:
