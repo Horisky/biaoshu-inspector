@@ -3,6 +3,7 @@
 换模型只需改 .env 中的 DEEPSEEK_BASE_URL / DEEPSEEK_API_KEY / DEEPSEEK_MODEL。
 """
 from functools import lru_cache
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -20,6 +21,12 @@ class Settings(BaseSettings):
 
     # 上传限制
     max_upload_mb: int = 30
+
+    # 容错：环境变量值常因复制粘贴带上首尾空白/制表符，统一去掉
+    @field_validator("deepseek_base_url", "deepseek_api_key", "deepseek_model", mode="before")
+    @classmethod
+    def _strip_str(cls, v):
+        return v.strip() if isinstance(v, str) else v
 
 
 @lru_cache
