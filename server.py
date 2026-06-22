@@ -210,6 +210,25 @@ async def export_pdf(payload: dict = Body(...)):
     return Response(content=data, media_type="application/pdf", headers=_attachment_headers(fn))
 
 
+@app.get("/api/export/{fmt}")
+async def export_by_job(fmt: str, job: str):
+    """按任务号导出（浏览器原生下载，不依赖前端 JS）。"""
+    if fmt not in ("docx", "pdf"):
+        raise HTTPException(400, "仅支持 docx / pdf")
+    j = JOBS.get(job)
+    if not j or j.get("status") != "done" or not j.get("result"):
+        raise HTTPException(404, "报告不存在或已过期，请重新检测后再导出")
+    payload = j["result"]
+    try:
+        data = build_docx(payload) if fmt == "docx" else build_pdf(payload)
+    except Exception as e:
+        logger.exception("导出失败")
+        raise HTTPException(500, f"导出失败：{e}")
+    media = ("application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+             if fmt == "docx" else "application/pdf")
+    return Response(content=data, media_type=media, headers=_attachment_headers(_download_name(payload, fmt)))
+
+
 # 静态资源（放在路由之后，避免覆盖 /api）
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
