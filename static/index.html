@@ -180,20 +180,24 @@
             <p class="text-[13px] text-[#86909C]" x-show="report.score_note" x-text="report.score_note"></p>
             <p class="text-[12px] text-[#C9CDD4] mt-2" x-text="`招标需求 ${meta.requirement_count} 条 · 投标分 ${meta.section_count} 章 · 用时 ${meta.elapsed_seconds}s`"></p>
           </div>
-          <!-- 三色计数 -->
+          <!-- 计数（点击筛选）-->
           <div class="flex gap-2 shrink-0">
-            <div class="text-center px-4 py-2 rounded-xl bg-red-50">
+            <button @click="pickSev('red')" class="text-center px-4 py-2 rounded-xl bg-red-50 transition hover:ring-2 hover:ring-red-200" :class="sevFilter==='red'?'ring-2 ring-red-400':''" title="点击只看否决项">
               <div class="text-[24px] font-bold text-red-600" x-text="counts.red"></div>
               <div class="text-[11px] text-red-500">否决项</div>
-            </div>
-            <div class="text-center px-4 py-2 rounded-xl bg-amber-50">
+            </button>
+            <button @click="pickSev('yellow')" class="text-center px-4 py-2 rounded-xl bg-amber-50 transition hover:ring-2 hover:ring-amber-200" :class="sevFilter==='yellow'?'ring-2 ring-amber-400':''" title="点击只看扣分项">
               <div class="text-[24px] font-bold text-amber-600" x-text="counts.yellow"></div>
               <div class="text-[11px] text-amber-500">扣分项</div>
-            </div>
-            <div class="text-center px-4 py-2 rounded-xl bg-green-50">
+            </button>
+            <button @click="pickSev('blue')" class="text-center px-4 py-2 rounded-xl bg-purple-50 transition hover:ring-2 hover:ring-purple-200" :class="sevFilter==='blue'?'ring-2 ring-purple-400':''" title="点击只看待人工核验项">
+              <div class="text-[24px] font-bold text-purple-600" x-text="counts.blue"></div>
+              <div class="text-[11px] text-purple-500">待核验</div>
+            </button>
+            <button @click="pickSev('green')" class="text-center px-4 py-2 rounded-xl bg-green-50 transition hover:ring-2 hover:ring-green-200" :class="sevFilter==='green'?'ring-2 ring-green-400':''" title="点击只看合规项">
               <div class="text-[24px] font-bold text-green-600" x-text="counts.green"></div>
               <div class="text-[11px] text-green-500">合规</div>
-            </div>
+            </button>
           </div>
         </div>
       </div>
@@ -205,17 +209,24 @@
           <div class="flex items-center gap-2 mb-4 flex-wrap">
             <span class="text-[13px] text-[#86909C]">严重程度</span>
             <template x-for="f in severityFilters" :key="f.v">
-              <button @click="sevFilter=f.v"
+              <button @click="pickSev(f.v)"
                       class="px-3 py-1.5 text-[13px] rounded-lg transition-colors border"
                       :class="sevFilter===f.v ? 'bg-[#1677FF] text-white border-[#1677FF]' : 'bg-white text-[#4E5969] border-[#E8ECF0] hover:border-[#1677FF]/40'">
                 <span x-text="f.l"></span>
               </button>
             </template>
+            <template x-if="catFilter">
+              <button @click="clearCat()" class="px-3 py-1.5 text-[13px] rounded-lg border border-[#1677FF]/30 bg-[#EBF4FF] text-[#1677FF] flex items-center gap-1">
+                <span x-text="'分类：'+catFilter"></span><span class="font-bold">✕</span>
+              </button>
+            </template>
           </div>
 
-          <div class="space-y-3">
+          <div class="space-y-3" id="findings-list">
             <template x-for="f in filteredFindings" :key="f.id">
-              <div class="bg-white rounded-xl border border-[#E8ECF0] overflow-hidden">
+              <div class="bg-white rounded-xl border overflow-hidden transition-all scroll-mt-20"
+                   :id="'finding-'+f.id"
+                   :class="highlightId===f.id ? 'border-[#1677FF] ring-2 ring-[#1677FF]/40 shadow-md' : 'border-[#E8ECF0]'">
                 <div class="h-1" :style="`background:${sevColor(f.severity)}`"></div>
                 <div class="p-4">
                   <div class="flex items-start gap-2 mb-2">
@@ -233,6 +244,11 @@
                     <template x-if="f.rule_reference">
                       <div class="text-[12px] text-[#4E5969] bg-[#F7F8FA] rounded-lg px-3 py-2">
                         <span class="text-[#86909C]">招标条款：</span><span x-text="f.rule_reference"></span>
+                      </div>
+                    </template>
+                    <template x-if="f.bid_reference">
+                      <div class="text-[12px] text-[#4E5969] bg-[#F7F8FA] rounded-lg px-3 py-2 border-l-2 border-[#722ED1]/40">
+                        <span class="text-[#86909C]">投标原文：</span><span x-text="f.bid_reference"></span>
                       </div>
                     </template>
                     <template x-if="f.law_reference">
@@ -263,31 +279,58 @@
 
         <!-- 右栏：分布 + 优先级 -->
         <div class="space-y-4">
-          <div class="bg-white rounded-xl border border-[#E8ECF0] p-4" x-show="catDist.length">
-            <p class="text-[13px] font-semibold mb-3">问题分类分布</p>
+          <!-- 否决分布分类（点击跳转对应否决项）-->
+          <div class="bg-white rounded-xl border border-[#E8ECF0] p-4" x-show="knockoutDist.length">
+            <div class="flex items-center gap-1.5 mb-3">
+              <span class="w-2 h-2 rounded-full bg-[#F53F3F]"></span>
+              <p class="text-[13px] font-semibold">否决分布分类</p>
+            </div>
             <div class="space-y-2.5">
-              <template x-for="c in catDist" :key="c.name">
-                <div>
+              <template x-for="c in knockoutDist" :key="c.name">
+                <div class="cursor-pointer group" @click="pickCat('red', c.name)">
                   <div class="flex justify-between text-[12px] mb-1">
-                    <span class="text-[#4E5969]" x-text="c.name"></span>
+                    <span class="text-[#4E5969] group-hover:text-[#F53F3F]" x-text="c.name"></span>
                     <span class="text-[#86909C]" x-text="c.value"></span>
                   </div>
                   <div class="h-1.5 bg-[#F2F3F5] rounded-full overflow-hidden">
-                    <div class="h-full bg-[#1677FF] rounded-full" :style="`width:${c.pct}%`"></div>
+                    <div class="h-full bg-[#F53F3F] rounded-full" :style="`width:${c.pct}%`"></div>
                   </div>
                 </div>
               </template>
             </div>
+            <p class="text-[11px] text-[#C9CDD4] mt-2.5">点击分类 → 查看对应否决项</p>
+          </div>
+
+          <!-- 扣分分布分类（点击跳转对应扣分项）-->
+          <div class="bg-white rounded-xl border border-[#E8ECF0] p-4" x-show="deductionDist.length">
+            <div class="flex items-center gap-1.5 mb-3">
+              <span class="w-2 h-2 rounded-full bg-[#FF7D00]"></span>
+              <p class="text-[13px] font-semibold">扣分分布分类</p>
+            </div>
+            <div class="space-y-2.5">
+              <template x-for="c in deductionDist" :key="c.name">
+                <div class="cursor-pointer group" @click="pickCat('yellow', c.name)">
+                  <div class="flex justify-between text-[12px] mb-1">
+                    <span class="text-[#4E5969] group-hover:text-[#FF7D00]" x-text="c.name"></span>
+                    <span class="text-[#86909C]" x-text="c.value"></span>
+                  </div>
+                  <div class="h-1.5 bg-[#F2F3F5] rounded-full overflow-hidden">
+                    <div class="h-full bg-[#FF7D00] rounded-full" :style="`width:${c.pct}%`"></div>
+                  </div>
+                </div>
+              </template>
+            </div>
+            <p class="text-[11px] text-[#C9CDD4] mt-2.5">点击分类 → 查看对应扣分项</p>
           </div>
 
           <div class="bg-white rounded-xl border border-[#E8ECF0] p-4" x-show="report.fix_priority && report.fix_priority.length">
             <p class="text-[13px] font-semibold mb-3">优先修改顺序</p>
             <div class="space-y-2.5">
               <template x-for="p in report.fix_priority" :key="p.id">
-                <div class="flex gap-2.5">
+                <div class="flex gap-2.5 cursor-pointer group -mx-1 px-1 py-1 rounded-lg hover:bg-[#F7F8FA]" @click="jumpToFinding(p.id)">
                   <span class="w-5 h-5 rounded-full bg-[#1677FF] text-white text-[11px] flex items-center justify-center shrink-0" x-text="p.rank"></span>
                   <div class="min-w-0">
-                    <p class="text-[12px] font-medium" x-text="p.id"></p>
+                    <p class="text-[12px] font-medium group-hover:text-[#1677FF]" x-text="p.id + ' →'"></p>
                     <p class="text-[12px] text-[#86909C] leading-5" x-text="p.reason"></p>
                   </div>
                 </div>
@@ -319,8 +362,8 @@ function inspector(){
     report:null, meta:{}, projectInfo:{},
     loadingStep:0, _timer:null,
     steps:['解析招标 / 投标文件','抽取招标需求与评分标准','八大维度合规审核'],
-    sevFilter:'all',
-    severityFilters:[{v:'all',l:'全部'},{v:'red',l:'否决项'},{v:'yellow',l:'扣分项'},{v:'green',l:'合规'}],
+    sevFilter:'all', catFilter:'', highlightId:'',
+    severityFilters:[{v:'all',l:'全部'},{v:'red',l:'否决项'},{v:'yellow',l:'扣分项'},{v:'blue',l:'待核验'},{v:'green',l:'合规'}],
     dimensions:[
       {key:'评标办法',n:'评',c:'#1677FF'},{key:'资格',n:'资',c:'#722ED1'},
       {key:'技术规范',n:'技',c:'#00B42A'},{key:'合同条款',n:'合',c:'#FF7D00'},
@@ -332,7 +375,30 @@ function inspector(){
     onDrop(e,key){ this.dragOver=''; const f=e.dataTransfer.files[0];
       if(f){ const ok=/\.(pdf|docx|doc)$/i.test(f.name); if(!ok){this.error='只支持 PDF / Word 文件';return;} this.files[key]=f; this.error=''; } },
 
-    reset(){ this.view='upload'; this.report=null; this.files={tender:null,bid:null}; this.error=''; this.sevFilter='all'; },
+    reset(){ this.view='upload'; this.report=null; this.files={tender:null,bid:null}; this.error=''; this.sevFilter='all'; this.catFilter=''; this.highlightId=''; },
+
+    // ── 筛选 / 跳转 ──
+    pickSev(sev){ this.sevFilter=sev; this.catFilter=''; this.scrollToList(); },
+    pickCat(sev, cat){ this.sevFilter=sev; this.catFilter=cat; this.scrollToList(); },
+    clearCat(){ this.catFilter=''; },
+    scrollToList(){ this.$nextTick(()=>{ const el=document.getElementById('findings-list'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); }); },
+    jumpToFinding(id){
+      this.sevFilter='all'; this.catFilter='';
+      this.$nextTick(()=>{ const el=document.getElementById('finding-'+id);
+        if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); this.highlightId=id;
+          setTimeout(()=>{ if(this.highlightId===id) this.highlightId=''; }, 2200); } });
+    },
+    // 分布：优先用报告里的分布字段，缺失则按 category 从 findings 推导
+    dist(distKey, sev){
+      const r=this.report||{}; let map=r[distKey];
+      if(!map || !Object.keys(map).length){ map={};
+        (r.findings||[]).filter(f=>f.severity===sev).forEach(f=>{ const c=f.category||'其他'; map[c]=(map[c]||0)+1; }); }
+      const items=Object.entries(map).map(([name,value])=>({name,value:+value||0})).filter(x=>x.value>0);
+      const max=Math.max(1,...items.map(x=>x.value));
+      return items.map(x=>({...x,pct:Math.round(x.value/max*100)}));
+    },
+    get knockoutDist(){ return this.dist('knockout_distribution','red'); },
+    get deductionDist(){ return this.dist('deduction_distribution','yellow'); },
 
     async exportReport(fmt){
       if(this.exporting) return;
@@ -391,16 +457,15 @@ function inspector(){
     get counts(){ const c=(this.report&&this.report.counts)||{}; const f=(this.report&&this.report.findings)||[];
       return { red: c.red ?? f.filter(x=>x.severity==='red').length,
                yellow: c.yellow ?? f.filter(x=>x.severity==='yellow').length,
+               blue: c.blue ?? f.filter(x=>x.severity==='blue').length,
                green: c.green ?? f.filter(x=>x.severity==='green').length }; },
-    get filteredFindings(){ const f=(this.report&&this.report.findings)||[];
-      return this.sevFilter==='all' ? f : f.filter(x=>x.severity===this.sevFilter); },
-    get catDist(){ const d=(this.report&&this.report.category_distribution)||{};
-      const items=Object.entries(d).map(([name,value])=>({name,value:+value||0})).filter(x=>x.value>0);
-      const max=Math.max(1,...items.map(x=>x.value));
-      return items.map(x=>({...x,pct:Math.round(x.value/max*100)})); },
+    get filteredFindings(){ let f=(this.report&&this.report.findings)||[];
+      if(this.sevFilter!=='all') f=f.filter(x=>x.severity===this.sevFilter);
+      if(this.catFilter) f=f.filter(x=>(x.category||'其他')===this.catFilter);
+      return f; },
 
-    sevColor(s){ return s==='red'?'#F53F3F':s==='yellow'?'#FF7D00':'#00B42A'; },
-    sevLabel(s){ return s==='red'?'否决项·必改':s==='yellow'?'扣分项·建议改':'合规'; },
+    sevColor(s){ return s==='red'?'#F53F3F':s==='yellow'?'#FF7D00':s==='blue'?'#722ED1':'#00B42A'; },
+    sevLabel(s){ return s==='red'?'否决项·必改':s==='yellow'?'扣分项·建议改':s==='blue'?'待核验·人工':'合规'; },
     scoreColor(s){ return s>=85?'text-[#00B42A]':s>=70?'text-[#FF7D00]':'text-[#F53F3F]'; },
   }
 }

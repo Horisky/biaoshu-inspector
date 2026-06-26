@@ -10,6 +10,7 @@ from datetime import datetime
 _SEV = {
     "red":    ("否决项·必改", "F53F3F"),
     "yellow": ("扣分项·建议改", "FF7D00"),
+    "blue":   ("待核验·人工", "722ED1"),
     "green":  ("合规", "00B42A"),
 }
 
@@ -92,6 +93,8 @@ def build_docx(payload: dict) -> bytes:
     font(para.add_run("    "), "仿宋", 12)
     font(para.add_run(f"扣分项 {counts.get('yellow',0)} 项"), "仿宋", 12, True, "FF7D00")
     font(para.add_run("    "), "仿宋", 12)
+    font(para.add_run(f"待核验 {counts.get('blue',0)} 项"), "仿宋", 12, True, "722ED1")
+    font(para.add_run("    "), "仿宋", 12)
     font(para.add_run(f"合规 {counts.get('green',0)} 项"), "仿宋", 12, True, "00B42A")
 
     para = doc.add_paragraph()
@@ -117,6 +120,8 @@ def build_docx(payload: dict) -> bytes:
             para = doc.add_paragraph(); font(para.add_run(f["description"]), "仿宋", 11)
         if f.get("rule_reference"):
             para = doc.add_paragraph(); font(para.add_run(f"招标条款：{f['rule_reference']}"), "楷体", 10.5, color="4E5969")
+        if f.get("bid_reference"):
+            para = doc.add_paragraph(); font(para.add_run(f"投标原文：{f['bid_reference']}"), "楷体", 10.5, color="4E5969")
         if f.get("law_reference"):
             para = doc.add_paragraph(); font(para.add_run(f"法律依据：{f['law_reference']}"), "楷体", 10.5, color="4E5969")
         if f.get("suggestion"):
@@ -277,6 +282,7 @@ def build_pdf(payload: dict) -> bytes:
     flow.append(Paragraph(
         f'<font color="#F53F3F">● 否决项 {counts.get("red",0)} 项</font>　'
         f'<font color="#FF7D00">● 扣分项 {counts.get("yellow",0)} 项</font>　'
+        f'<font color="#722ED1">● 待核验 {counts.get("blue",0)} 项</font>　'
         f'<font color="#00B42A">● 合规 {counts.get("green",0)} 项</font>', body))
     flow.append(Spacer(1, 3 * mm))
     flow.append(HRFlowable(width="100%", thickness=0.6, color=colors.HexColor("#E8ECF0")))
@@ -298,6 +304,8 @@ def build_pdf(payload: dict) -> bytes:
             flow.append(Paragraph(esc(f["description"]), body))
         if f.get("rule_reference"):
             flow.append(Paragraph(f'<font color="#4E5969">招标条款：{esc(f["rule_reference"])}</font>', small))
+        if f.get("bid_reference"):
+            flow.append(Paragraph(f'<font color="#4E5969">投标原文：{esc(f["bid_reference"])}</font>', small))
         if f.get("law_reference"):
             flow.append(Paragraph(f'<font color="#4E5969">法律依据：{esc(f["law_reference"])}</font>', small))
         if f.get("suggestion"):

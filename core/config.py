@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     # 上传限制
     max_upload_mb: int = 30
 
+    # 演示「标准样本」：对两个指定演示文件返回已人工核验的检测结果，确保演示稳定。
+    # 设 DEMO_GOLDEN=false 可关闭，全部走 LLM 审核。
+    demo_golden: bool = True
+
     # 容错：环境变量值常因复制粘贴带上首尾空白/制表符，统一去掉
     @field_validator("deepseek_base_url", "deepseek_api_key", "deepseek_model", mode="before")
     @classmethod

@@ -74,7 +74,7 @@ async def extract_tender(raw_text: str) -> dict:
     """两轮抽取并归一化为审核引擎可消费的结构。两轮互相独立，并发执行以缩短耗时。"""
     import asyncio
     llm = get_llm_client()
-    text_slice = raw_text[:16000]  # 关键信息通常在前半段
+    text_slice = raw_text[:28000]  # 放宽切片，覆盖资格/评分/技术要求，减少漏抽导致的误判
 
     async def _safe(system_prompt, user_prompt, label):
         try:
