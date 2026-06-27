@@ -53,6 +53,7 @@ def golden_report() -> dict:
         # ════════ 否决项（red）════════
         {
             "id": "H-01",
+            "rule_page": "招标文件第4、27页",
             "dimension": "资格",
             "severity": "red",
             "is_knockout": True,
@@ -90,6 +91,7 @@ def golden_report() -> dict:
         },
         {
             "id": "H-02",
+            "rule_page": "招标文件第33页",
             "dimension": "一致性",
             "severity": "red",
             "is_knockout": True,
@@ -125,6 +127,7 @@ def golden_report() -> dict:
         # ════════ 扣分项（yellow）════════
         {
             "id": "H-03",
+            "rule_page": "招标文件第29页",
             "dimension": "评标办法",
             "severity": "yellow",
             "is_knockout": False,
@@ -144,6 +147,7 @@ def golden_report() -> dict:
         },
         {
             "id": "H-04",
+            "rule_page": "招标文件第29页",
             "dimension": "评标办法",
             "severity": "yellow",
             "is_knockout": False,
@@ -163,6 +167,7 @@ def golden_report() -> dict:
         },
         {
             "id": "H-05",
+            "rule_page": "招标文件第29页",
             "dimension": "合同条款",
             "severity": "yellow",
             "is_knockout": False,
@@ -184,6 +189,7 @@ def golden_report() -> dict:
         # ════════ 待人工核验（blue）════════
         {
             "id": "H-06",
+            "rule_page": "招标文件第28页",
             "dimension": "规范性",
             "severity": "blue",
             "is_knockout": False,
@@ -204,6 +210,7 @@ def golden_report() -> dict:
         },
         {
             "id": "H-07",
+            "rule_page": "招标文件第30、31页",
             "dimension": "评标办法",
             "severity": "blue",
             "is_knockout": False,
@@ -224,6 +231,7 @@ def golden_report() -> dict:
         },
         {
             "id": "H-08",
+            "rule_page": "招标文件第30页",
             "dimension": "一致性",
             "severity": "blue",
             "is_knockout": False,
@@ -244,6 +252,7 @@ def golden_report() -> dict:
         # ════════ 合规（green）—— 明确这些此前曾被误报，实际已满足 ════════
         {
             "id": "G-01",
+            "rule_page": "招标文件第10页",
             "dimension": "有效性",
             "severity": "green",
             "is_knockout": False,
@@ -260,6 +269,7 @@ def golden_report() -> dict:
         },
         {
             "id": "G-02",
+            "rule_page": "招标文件第10页",
             "dimension": "有效性",
             "severity": "green",
             "is_knockout": False,
@@ -276,6 +286,7 @@ def golden_report() -> dict:
         },
         {
             "id": "G-03",
+            "rule_page": "招标文件第4页",
             "dimension": "资格",
             "severity": "green",
             "is_knockout": False,
@@ -292,6 +303,7 @@ def golden_report() -> dict:
         },
         {
             "id": "G-04",
+            "rule_page": "招标文件第5页",
             "dimension": "资格",
             "severity": "green",
             "is_knockout": False,
@@ -308,6 +320,7 @@ def golden_report() -> dict:
         },
         {
             "id": "G-05",
+            "rule_page": "招标文件第5页",
             "dimension": "技术规范",
             "severity": "green",
             "is_knockout": False,
@@ -324,6 +337,7 @@ def golden_report() -> dict:
         },
         {
             "id": "G-06",
+            "rule_page": "招标文件第10页",
             "dimension": "资格",
             "severity": "green",
             "is_knockout": False,
