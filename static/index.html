@@ -243,7 +243,7 @@
                   <div class="space-y-1.5 mb-3">
                     <template x-if="f.rule_reference">
                       <div class="text-[12px] text-[#4E5969] bg-[#F7F8FA] rounded-lg px-3 py-2">
-                        <span class="text-[#86909C]">招标条款：</span><span x-text="f.rule_reference"></span>
+                        <span class="text-[#86909C]">招标条款</span><span x-show="f.rule_page" class="text-[#1677FF] font-medium" x-text="'（'+f.rule_page+'）'"></span><span class="text-[#86909C]">：</span><span x-text="f.rule_reference"></span>
                       </div>
                     </template>
                     <template x-if="f.bid_reference">
