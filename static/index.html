@@ -462,7 +462,8 @@ function inspector(){
     get filteredFindings(){ let f=(this.report&&this.report.findings)||[];
       if(this.sevFilter!=='all') f=f.filter(x=>x.severity===this.sevFilter);
       if(this.catFilter) f=f.filter(x=>(x.category||'其他')===this.catFilter);
-      return f; },
+      const rank={red:0,yellow:1,blue:2,green:3};
+      return f.slice().sort((a,b)=>(rank[a.severity]??9)-(rank[b.severity]??9)); },
 
     sevColor(s){ return s==='red'?'#F53F3F':s==='yellow'?'#FF7D00':s==='blue'?'#722ED1':'#00B42A'; },
     sevLabel(s){ return s==='red'?'否决项·必改':s==='yellow'?'扣分项·建议改':s==='blue'?'待核验·人工':'合规'; },
