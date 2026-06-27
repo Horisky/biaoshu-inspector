@@ -115,7 +115,8 @@ def build_docx(payload: dict) -> bytes:
         font(para.add_run(f.get("title", "")), "黑体", 12, True)
 
         if f.get("location"):
-            para = doc.add_paragraph(); font(para.add_run(f"位置：{f['location']}"), "仿宋", 10.5, color="86909C")
+            _loc = f["location"] + (f"　投标{f['bid_page']}" if f.get("bid_page") else "")
+            para = doc.add_paragraph(); font(para.add_run(f"位置：{_loc}"), "仿宋", 10.5, color="86909C")
         if f.get("description"):
             para = doc.add_paragraph(); font(para.add_run(f["description"]), "仿宋", 11)
         if f.get("rule_reference"):
@@ -300,7 +301,8 @@ def build_pdf(payload: dict) -> bytes:
             f'<font color="#86909C">[{esc(f.get("dimension"))}]</font> '
             f'<font name="{_FONT_BOLD}">{esc(f.get("title"))}</font>', body))
         if f.get("location"):
-            flow.append(Paragraph(f"位置：{esc(f['location'])}", small))
+            _loc = f["location"] + (f"　投标{f['bid_page']}" if f.get("bid_page") else "")
+            flow.append(Paragraph(f"位置：{esc(_loc)}", small))
         if f.get("description"):
             flow.append(Paragraph(esc(f["description"]), body))
         if f.get("rule_reference"):
