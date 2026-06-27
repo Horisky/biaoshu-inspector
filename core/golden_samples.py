@@ -53,6 +53,7 @@ def golden_report() -> dict:
         # ════════ 否决项（red）════════
         {
             "id": "H-01",
+            "rule_section": "第三章 评标办法 · 2.1.1 资格评审标准（业绩要求）",
             "rule_page": "招标文件第4、27页",
             "bid_page": "第35页",
             "dimension": "资格",
@@ -92,6 +93,7 @@ def golden_report() -> dict:
         },
         {
             "id": "H-02",
+            "rule_section": "第三章 评标办法 · 3.1.3 投标报价修正",
             "rule_page": "招标文件第33页",
             "bid_page": "第8页",
             "dimension": "一致性",
@@ -129,6 +131,7 @@ def golden_report() -> dict:
         # ════════ 扣分项（yellow）════════
         {
             "id": "H-03",
+            "rule_section": "第三章 评标办法 · 2.2.2 投标人实力（评分标准）",
             "rule_page": "招标文件第29页",
             "bid_page": "第83页",
             "dimension": "评标办法",
@@ -150,6 +153,7 @@ def golden_report() -> dict:
         },
         {
             "id": "H-04",
+            "rule_section": "第三章 评标办法 · 2.2.2 投标人实力（评分标准）",
             "rule_page": "招标文件第29页",
             "bid_page": "第84页",
             "dimension": "评标办法",
@@ -171,6 +175,7 @@ def golden_report() -> dict:
         },
         {
             "id": "H-05",
+            "rule_section": "第三章 评标办法 · 软件质保期（评分）；第四章 合同文本",
             "rule_page": "招标文件第29页",
             "bid_page": "第80页",
             "dimension": "合同条款",
@@ -194,6 +199,7 @@ def golden_report() -> dict:
         # ════════ 待人工核验（blue）════════
         {
             "id": "H-06",
+            "rule_section": "第三章 评标办法 · 2.1.2 符合性评审",
             "rule_page": "招标文件第28页",
             "bid_page": "第3页起",
             "dimension": "规范性",
@@ -216,6 +222,7 @@ def golden_report() -> dict:
         },
         {
             "id": "H-07",
+            "rule_section": "第三章 评标办法 · 项目管理团队（评分依据）",
             "rule_page": "招标文件第30、31页",
             "bid_page": "第83、85页",
             "dimension": "评标办法",
@@ -238,6 +245,7 @@ def golden_report() -> dict:
         },
         {
             "id": "H-08",
+            "rule_section": "第三章 评标办法 · 项目管理团队",
             "rule_page": "招标文件第30页",
             "bid_page": "第78页",
             "dimension": "一致性",
@@ -260,6 +268,7 @@ def golden_report() -> dict:
         # ════════ 合规（green）—— 明确这些此前曾被误报，实际已满足 ════════
         {
             "id": "G-01",
+            "rule_section": "第二章 投标人须知 · 3.2.4 最高投标限价",
             "rule_page": "招标文件第10页",
             "bid_page": "第3页",
             "dimension": "有效性",
@@ -278,6 +287,7 @@ def golden_report() -> dict:
         },
         {
             "id": "G-02",
+            "rule_section": "第二章 投标人须知 · 3.3.1 投标有效期",
             "rule_page": "招标文件第10页",
             "bid_page": "第3页",
             "dimension": "有效性",
@@ -296,6 +306,7 @@ def golden_report() -> dict:
         },
         {
             "id": "G-03",
+            "rule_section": "第三章 评标办法 · 信誉要求（资格审查7-3）",
             "rule_page": "招标文件第4页",
             "bid_page": "第34页",
             "dimension": "资格",
@@ -314,6 +325,7 @@ def golden_report() -> dict:
         },
         {
             "id": "G-04",
+            "rule_section": "第一章 招标公告 · 3.2 不接受联合体",
             "rule_page": "招标文件第5页",
             "bid_page": "第6页",
             "dimension": "资格",
@@ -332,6 +344,7 @@ def golden_report() -> dict:
         },
         {
             "id": "G-05",
+            "rule_section": "第三章 评标办法 · 其他要求（核心产品：超融合）",
             "rule_page": "招标文件第5页",
             "bid_page": "第9页",
             "dimension": "技术规范",
@@ -350,6 +363,7 @@ def golden_report() -> dict:
         },
         {
             "id": "G-06",
+            "rule_section": "第二章 投标人须知 · 3.4.1 投标保证金",
             "rule_page": "招标文件第10页",
             "bid_page": "第81页",
             "dimension": "资格",
