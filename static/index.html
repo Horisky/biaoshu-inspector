@@ -170,8 +170,13 @@
         <div class="flex flex-col md:flex-row gap-6 items-center">
           <!-- 得分 -->
           <div class="text-center shrink-0 px-4">
-            <div class="text-[52px] font-black leading-none" :class="scoreColor(report.overall_score)" x-text="report.overall_score ?? '—'"></div>
-            <p class="text-[12px] text-[#86909C] mt-1">预估得分</p>
+            <template x-if="report.is_rejected">
+              <div class="text-[44px] font-black leading-none text-[#F53F3F]">废标</div>
+            </template>
+            <template x-if="!report.is_rejected">
+              <div class="text-[52px] font-black leading-none" :class="scoreColor(report.overall_score)" x-text="report.overall_score ?? '—'"></div>
+            </template>
+            <p class="text-[12px] text-[#86909C] mt-1" x-text="report.is_rejected ? '废标·不予评分' : '预估得分'"></p>
           </div>
           <div class="hidden md:block w-px h-16 bg-[#E8ECF0]"></div>
           <!-- 结论 -->

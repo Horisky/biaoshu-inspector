@@ -77,10 +77,14 @@ def build_docx(payload: dict) -> bytes:
     # 总览
     _heading(doc, font, "一、检测总览")
     para = doc.add_paragraph()
-    font(para.add_run("预估得分："), "黑体", 12, True)
     score = report.get("overall_score")
-    sc_color = "00B42A" if (isinstance(score, int) and score >= 85) else ("FF7D00" if (isinstance(score, int) and score >= 70) else "F53F3F")
-    font(para.add_run(f"{score if score is not None else '—'} 分"), "黑体", 14, True, sc_color)
+    if report.get("is_rejected"):
+        font(para.add_run("评审结论："), "黑体", 12, True)
+        font(para.add_run("废标（不予评分）"), "黑体", 14, True, "F53F3F")
+    else:
+        font(para.add_run("预估得分："), "黑体", 12, True)
+        sc_color = "00B42A" if (isinstance(score, int) and score >= 85) else ("FF7D00" if (isinstance(score, int) and score >= 70) else "F53F3F")
+        font(para.add_run(f"{score if score is not None else '—'} 分"), "黑体", 14, True, sc_color)
 
     para = doc.add_paragraph()
     font(para.add_run("整体结论："), "黑体", 12, True)
@@ -274,9 +278,13 @@ def build_pdf(payload: dict) -> bytes:
     # 总览
     flow.append(Paragraph("一、检测总览", h1))
     score = report.get("overall_score")
-    sc_color = "#00B42A" if (isinstance(score, int) and score >= 85) else ("#FF7D00" if (isinstance(score, int) and score >= 70) else "#F53F3F")
-    flow.append(Paragraph(
-        f'预估得分：<font name="{_FONT_BOLD}" size="15" color="{sc_color}">{score if score is not None else "—"} 分</font>', body))
+    if report.get("is_rejected"):
+        flow.append(Paragraph(
+            f'评审结论：<font name="{_FONT_BOLD}" size="15" color="#F53F3F">废标（不予评分）</font>', body))
+    else:
+        sc_color = "#00B42A" if (isinstance(score, int) and score >= 85) else ("#FF7D00" if (isinstance(score, int) and score >= 70) else "#F53F3F")
+        flow.append(Paragraph(
+            f'预估得分：<font name="{_FONT_BOLD}" size="15" color="{sc_color}">{score if score is not None else "—"} 分</font>', body))
     flow.append(Paragraph(f"整体结论：{esc(report.get('overall_verdict') or '检测完成')}", body))
     if report.get("score_note"):
         flow.append(Paragraph(esc(report["score_note"]), small))

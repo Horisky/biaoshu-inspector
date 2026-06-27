@@ -398,6 +398,7 @@ def golden_report(key: str = "baseline") -> dict:
 
     base = {
         "overall_score": 80,
+        "is_rejected": False,
         "overall_verdict": "存在1项废标点（报价明细算术勾稽），另有4项扣分与3项待人工核验；建议补正后再投。",
         "score_note": "修正报价明细算术、补强业绩证明与加分材料后，预计可提升至88分以上。",
         "counts": {"red": 1, "yellow": 4, "blue": 3, "green": 6},
@@ -453,6 +454,7 @@ def _to_twoissues(base: dict) -> dict:
     r["knockout_distribution"] = {"价格策略": 2, "格式/完整性": 1}
     r["deduction_distribution"] = {"资质/信誉": 2, "技术响应": 1, "商务条款": 1}
     r["overall_score"] = 0
+    r["is_rejected"] = True
     r["overall_verdict"] = "存在3项废标点（报价超最高限价、投标有效期不足、报价明细算术勾稽），投标将被否决；须整改后再投。"
     r["score_note"] = "修正报价至限价内、有效期≥90天、报价明细算术并补强材料后，预计可达88分以上。"
     r["fix_priority"] = [
