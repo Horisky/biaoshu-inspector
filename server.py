@@ -28,7 +28,7 @@ from core.extractor import extract_tender
 from core.reviewer import run_review
 from core.report_export import build_docx, build_pdf
 from core.golden_samples import (
-    is_golden_match, golden_report, golden_project_info, GOLDEN_REQUIREMENT_COUNT,
+    golden_match, golden_report, golden_project_info, GOLDEN_REQUIREMENT_COUNT,
 )
 
 settings = get_settings()
@@ -98,9 +98,10 @@ async def _run_inspect_job(job_id: str, tender_bytes: bytes, tender_name: str,
         if len(bid_text.strip()) < 50:
             raise ValueError("投标文件解析后内容过少，可能是扫描件或加密文件，请换用可复制文本的版本")
 
-        # ── 演示「标准样本」：两个指定演示文件返回已人工核验的稳定结果 ──
-        if settings.demo_golden and is_golden_match(tender_text, bid_text):
-            logger.info(f"命中演示标准样本，返回已核验结果 job={job_id}")
+        # ── 演示「标准样本」：指定演示文件返回已人工核验的稳定结果 ──
+        gkey = golden_match(tender_text, bid_text) if settings.demo_golden else None
+        if gkey:
+            logger.info(f"命中演示标准样本[{gkey}]，返回已核验结果 job={job_id}")
             sections = split_into_sections(bid_text)
             job["step"] = "extracting"
             await asyncio.sleep(3.0)   # 还原“抽取需求”进度感
@@ -109,7 +110,7 @@ async def _run_inspect_job(job_id: str, tender_bytes: bytes, tender_name: str,
             elapsed = round(time.time() - t0, 1)
             job["result"] = {
                 "project_info": golden_project_info(),
-                "report": golden_report(),
+                "report": golden_report(gkey),
                 "meta": {
                     "tender_file": tender_name,
                     "bid_file": bid_name,

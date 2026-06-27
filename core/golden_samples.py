@@ -19,16 +19,30 @@ report 级：overall_score, overall_verdict, score_note, counts{red,yellow,blue,
   knockout_distribution{分类:数}, deduction_distribution{分类:数}, fix_priority[], findings[]
 """
 from __future__ import annotations
+import copy
 
 
 # ── 演示文件识别（按内容签名，重命名也能命中）──────────────────
-def is_golden_match(tender_text: str, bid_text: str) -> bool:
-    """通过文档内容签名判断是否为这两个指定演示文件。"""
+def golden_match(tender_text: str, bid_text: str):
+    """返回命中的演示样本键，未命中返回 None：
+      'baseline'  —— 原始投标（中国移动，报价573万）
+      'twoissues' —— 演示用·人为改出2处废标点（报价580万超限、有效期60天不足）
+    """
     t = tender_text or ""
     b = bid_text or ""
     tender_hit = ("JXTZ2026010107" in t) or ("台意电工智慧工厂" in t and "5732400" in t)
-    bid_hit = ("中国移动通信集团江西有限公司" in b) and ("5730000" in b or "伍佰柒拾叁万元整" in b)
-    return tender_hit and bid_hit
+    if not tender_hit or ("中国移动通信集团江西有限公司" not in b):
+        return None
+    if ("5800000" in b) or ("伍佰捌拾万元整" in b):
+        return "twoissues"
+    if ("5730000" in b) or ("伍佰柒拾叁万元整" in b):
+        return "baseline"
+    return None
+
+
+# 向后兼容
+def is_golden_match(tender_text: str, bid_text: str) -> bool:
+    return golden_match(tender_text, bid_text) is not None
 
 
 def golden_project_info() -> dict:
@@ -48,7 +62,7 @@ def golden_project_info() -> dict:
 GOLDEN_REQUIREMENT_COUNT = 42
 
 
-def golden_report() -> dict:
+def golden_report(key: str = "baseline") -> dict:
     findings = [
         # ════════ 否决项（red）════════
         {
@@ -382,7 +396,7 @@ def golden_report() -> dict:
         },
     ]
 
-    return {
+    base = {
         "overall_score": 80,
         "overall_verdict": "存在1项废标点（报价明细算术勾稽），另有4项扣分与3项待人工核验；建议补正后再投。",
         "score_note": "修正报价明细算术、补强业绩证明与加分材料后，预计可提升至88分以上。",
@@ -399,3 +413,50 @@ def golden_report() -> dict:
             {"rank": 4, "id": "H-03", "reason": "国家级可信数据空间试点材料缺失，直接丢2分。"},
         ],
     }
+    if key == "twoissues":
+        return _to_twoissues(base)
+    return base
+
+
+def _to_twoissues(base: dict) -> dict:
+    """演示变体：在原始投标基础上，把人为改出的2处问题（报价超限、有效期不足）
+    由合规翻为否决，并同步统计/结论/优先级。"""
+    r = copy.deepcopy(base)
+    fmap = {f["id"]: f for f in r["findings"]}
+    fmap["G-01"].update({
+        "severity": "red", "is_knockout": True,
+        "title": "投标报价超最高限价",
+        "description": "投标报价5,800,000元，已超过最高投标限价5,732,400元，按招标规定其投标将被否决。",
+        "rule_reference": "最高投标限价5,732,400.00元，投标人的报价不得超过最高投标限价，否则其投标将被否决。",
+        "bid_reference": "投标报价：大写 伍佰捌拾万元整（¥5,800,000）。",
+        "suggestion": "将投标报价下调至不超过最高投标限价5,732,400元后再投。",
+        "actions": [],
+        "score_impact": "否决项·报价超限即废标",
+        "category": "价格策略",
+        "rule_section": "第二章 投标人须知 · 3.2.4 最高投标限价",
+    })
+    fmap["G-02"].update({
+        "severity": "red", "is_knockout": True,
+        "title": "投标有效期不足90天",
+        "description": "招标要求投标有效期不少于90天，投标仅承诺60个日历日，不满足实质性要求，按招标规定其投标将被否决。",
+        "rule_reference": "投标有效期：自投标人递交投标文件截止之日起计算90天。",
+        "bid_reference": "本投标有效期为自开标日起60个日历日。",
+        "suggestion": "将投标有效期修改为不少于90天（自开标日起）。",
+        "actions": [],
+        "score_impact": "否决项·有效期不足即废标",
+        "category": "格式/完整性",
+        "rule_section": "第二章 投标人须知 · 3.3.1 投标有效期",
+    })
+    r["counts"] = {"red": 3, "yellow": 4, "blue": 3, "green": 4}
+    r["knockout_distribution"] = {"价格策略": 2, "格式/完整性": 1}
+    r["deduction_distribution"] = {"资质/信誉": 2, "技术响应": 1, "商务条款": 1}
+    r["overall_score"] = 0
+    r["overall_verdict"] = "存在3项废标点（报价超最高限价、投标有效期不足、报价明细算术勾稽），投标将被否决；须整改后再投。"
+    r["score_note"] = "修正报价至限价内、有效期≥90天、报价明细算术并补强材料后，预计可达88分以上。"
+    r["fix_priority"] = [
+        {"rank": 1, "id": "G-01", "reason": "报价580万超最高限价573.24万，直接废标，须先把报价压到限价内。"},
+        {"rank": 2, "id": "G-02", "reason": "投标有效期60天<90天，直接废标，须改为≥90天。"},
+        {"rank": 3, "id": "H-02", "reason": "报价明细算术错误致与总价勾稽不符，拒不澄清将废标。"},
+        {"rank": 4, "id": "H-01", "reason": "业绩MES金额未单列，影响资格认定与加分，应补强。"},
+    ]
+    return r
