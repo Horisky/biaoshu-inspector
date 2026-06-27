@@ -110,18 +110,16 @@ def build_docx(payload: dict) -> bytes:
         font(para.add_run(f"{i}. "), "黑体", 12, True)
         font(para.add_run(f"[{label}]"), "黑体", 11, True, color)
         if f.get("is_knockout"):
-            font(para.add_run("[废标风险]"), "黑体", 11, True, "F53F3F")
+            font(para.add_run("[废标点]"), "黑体", 11, True, "F53F3F")
         font(para.add_run(f"[{f.get('dimension','')}] "), "仿宋", 11, color="86909C")
         font(para.add_run(f.get("title", "")), "黑体", 12, True)
 
         if f.get("location"):
-            _loc = f["location"] + (f"　投标{f['bid_page']}" if f.get("bid_page") else "")
-            para = doc.add_paragraph(); font(para.add_run(f"位置：{_loc}"), "仿宋", 10.5, color="86909C")
+            para = doc.add_paragraph(); font(para.add_run(f"位置：{f['location']}"), "仿宋", 10.5, color="86909C")
         if f.get("description"):
             para = doc.add_paragraph(); font(para.add_run(f["description"]), "仿宋", 11)
         if f.get("rule_reference"):
-            _pg = f"（{f['rule_page']}）" if f.get("rule_page") else ""
-            para = doc.add_paragraph(); font(para.add_run(f"招标条款{_pg}：{f['rule_reference']}"), "楷体", 10.5, color="4E5969")
+            para = doc.add_paragraph(); font(para.add_run(f"招标条款：{f['rule_reference']}"), "楷体", 10.5, color="4E5969")
         if f.get("bid_reference"):
             para = doc.add_paragraph(); font(para.add_run(f"投标原文：{f['bid_reference']}"), "楷体", 10.5, color="4E5969")
         if f.get("law_reference"):
@@ -294,20 +292,18 @@ def build_pdf(payload: dict) -> bytes:
     flow.append(Paragraph(f"二、问题清单（共 {len(findings)} 条）", h1))
     for i, f in enumerate(findings, 1):
         label, color = _sev(f.get("severity"))
-        ko = f' <font name="{_FONT_BOLD}" color="#F53F3F">[废标风险]</font>' if f.get("is_knockout") else ""
+        ko = f' <font name="{_FONT_BOLD}" color="#F53F3F">[废标点]</font>' if f.get("is_knockout") else ""
         flow.append(Paragraph(
             f'<font name="{_FONT_BOLD}">{i}.</font> '
             f'<font name="{_FONT_BOLD}" color="#{color}">[{label}]</font>{ko} '
             f'<font color="#86909C">[{esc(f.get("dimension"))}]</font> '
             f'<font name="{_FONT_BOLD}">{esc(f.get("title"))}</font>', body))
         if f.get("location"):
-            _loc = f["location"] + (f"　投标{f['bid_page']}" if f.get("bid_page") else "")
-            flow.append(Paragraph(f"位置：{esc(_loc)}", small))
+            flow.append(Paragraph(f"位置：{esc(f['location'])}", small))
         if f.get("description"):
             flow.append(Paragraph(esc(f["description"]), body))
         if f.get("rule_reference"):
-            _pg = f'（{esc(f["rule_page"])}）' if f.get("rule_page") else ""
-            flow.append(Paragraph(f'<font color="#4E5969">招标条款{_pg}：{esc(f["rule_reference"])}</font>', small))
+            flow.append(Paragraph(f'<font color="#4E5969">招标条款：{esc(f["rule_reference"])}</font>', small))
         if f.get("bid_reference"):
             flow.append(Paragraph(f'<font color="#4E5969">投标原文：{esc(f["bid_reference"])}</font>', small))
         if f.get("law_reference"):
