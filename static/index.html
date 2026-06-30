@@ -328,7 +328,7 @@
             <p class="text-[11px] text-[#C9CDD4] mt-2.5">点击分类 → 查看对应扣分项</p>
           </div>
 
-          <div class="bg-white rounded-xl border border-[#E8ECF0] p-4" x-show="report.fix_priority && report.fix_priority.length">
+          <div class="bg-white rounded-xl border border-[#E8ECF0] p-4" x-show="false">
             <p class="text-[13px] font-semibold mb-3">优先修改顺序</p>
             <div class="space-y-2.5">
               <template x-for="p in report.fix_priority" :key="p.id">
