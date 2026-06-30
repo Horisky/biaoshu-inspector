@@ -182,6 +182,7 @@
           <!-- 结论 -->
           <div class="flex-1 min-w-0">
             <p class="text-[16px] font-semibold mb-1.5" x-text="report.overall_verdict || '检测完成'"></p>
+            <p class="text-[13px] text-[#F53F3F] font-medium mb-0.5" x-show="counts.red>0">⚠ 建议优先处理否决项（废标点），再处理扣分与待核验项。</p>
             <p class="text-[13px] text-[#86909C]" x-show="report.score_note" x-text="report.score_note"></p>
             <p class="text-[12px] text-[#C9CDD4] mt-2" x-text="`招标需求 ${meta.requirement_count} 条 · 投标分 ${meta.section_count} 章 · 用时 ${meta.elapsed_seconds}s`"></p>
           </div>
