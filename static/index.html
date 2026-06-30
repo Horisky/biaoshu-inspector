@@ -242,7 +242,6 @@
                     <span class="px-2 py-0.5 rounded text-[11px] bg-[#F2F3F5] text-[#86909C] shrink-0 mt-0.5" x-text="f.dimension"></span>
                     <h3 class="text-[14px] font-semibold flex-1" x-text="f.title"></h3>
                   </div>
-                  <p class="text-[12px] text-[#C9CDD4] mb-2" x-show="f.location" x-text="'📍 '+f.location"></p>
                   <p class="text-[13px] text-[#4E5969] leading-6 mb-3" x-text="f.description"></p>
 
                   <div class="space-y-1.5 mb-3">
@@ -253,12 +252,12 @@
                     </template>
                     <template x-if="f.bid_reference">
                       <div class="text-[12px] text-[#4E5969] bg-[#F7F8FA] rounded-lg px-3 py-2 border-l-2 border-[#722ED1]/40">
-                        <span class="text-[#86909C]">投标原文：</span><span x-text="f.bid_reference"></span>
+                        <span class="text-[#86909C]">投标原文</span><span x-show="f.location" class="text-[#1677FF] font-medium" x-text="'（'+f.location+'）'"></span><span class="text-[#86909C]">：</span><span x-text="f.bid_reference"></span>
                       </div>
                     </template>
                     <template x-if="f.law_reference">
                       <div class="text-[12px] text-[#4E5969] bg-[#F7F8FA] rounded-lg px-3 py-2">
-                        <span class="text-[#86909C]">法律依据：</span><span x-text="f.law_reference"></span>
+                        <span class="text-[#86909C]">依据：</span><span x-text="f.law_reference"></span>
                       </div>
                     </template>
                   </div>

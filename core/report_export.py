@@ -128,7 +128,7 @@ def build_docx(payload: dict) -> bytes:
         if f.get("bid_reference"):
             para = doc.add_paragraph(); font(para.add_run(f"投标原文：{f['bid_reference']}"), "楷体", 10.5, color="4E5969")
         if f.get("law_reference"):
-            para = doc.add_paragraph(); font(para.add_run(f"法律依据：{f['law_reference']}"), "楷体", 10.5, color="4E5969")
+            para = doc.add_paragraph(); font(para.add_run(f"依据：{f['law_reference']}"), "楷体", 10.5, color="4E5969")
         if f.get("suggestion"):
             para = doc.add_paragraph()
             font(para.add_run("修改建议："), "黑体", 11, True, "1677FF")
@@ -317,7 +317,7 @@ def build_pdf(payload: dict) -> bytes:
         if f.get("bid_reference"):
             flow.append(Paragraph(f'<font color="#4E5969">投标原文：{esc(f["bid_reference"])}</font>', small))
         if f.get("law_reference"):
-            flow.append(Paragraph(f'<font color="#4E5969">法律依据：{esc(f["law_reference"])}</font>', small))
+            flow.append(Paragraph(f'<font color="#4E5969">依据：{esc(f["law_reference"])}</font>', small))
         if f.get("suggestion"):
             flow.append(Paragraph(f'<font name="{_FONT_BOLD}" color="#1677FF">修改建议：</font>{esc(f["suggestion"])}', body))
         for a in (f.get("actions") or []):
